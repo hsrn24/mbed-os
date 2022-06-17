@@ -30,6 +30,7 @@
 typedef enum crc_polynomial {
     POLY_7BIT_SD     = 0x09,         ///< x7+x3+1
     POLY_8BIT_CCITT  = 0x07,         ///< x8+x2+x+1
+    POLY_8BIT_SAE_J1850 = 0x1D,      ///< x8+x4+x3+x2+1
     POLY_16BIT_CCITT = 0x1021,       ///< x16+x12+x5+1
     POLY_16BIT_IBM   = 0x8005,       ///< x16+x15+x2+1
     POLY_32BIT_ANSI  = 0x04C11DB7    ///< x32+x26+x23+x22+x16+x12+x11+x10+x8+x7+x5+x4+x2+x+1
@@ -72,7 +73,7 @@ extern "C" {
  *   reflect_in, reflect_out, then these operations must be handled by the driver
  *   - Verified by test ::crc_calc_single_test.
  * * Platform which supports hardware CRC must be able to handle at least one of the predefined
- *   polynomial/width configurations that can be constructed in the MbedCRC class: POLY_8BIT_CCITT,
+ *   polynomial/width configurations that can be constructed in the MbedCRC class: POLY_8BIT_CCITT, POLY_8BIT_SAE_J1850
  *   POLY_7BIT_SD, POLY_16BIT_CCITT, POLY_16BIT_IBM, POLY_32BIT_ANSI
  *   - verified by test ::crc_is_supported_test, ::crc_calc_single_test.
  * * Function hal_crc_compute_partial_start() configures CRC module with the given configuration

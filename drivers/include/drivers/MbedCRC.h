@@ -61,6 +61,7 @@ constexpr bool have_crc_table(uint32_t polynomial, uint8_t width)
            (polynomial == POLY_16BIT_IBM && width == 16) ||
            (polynomial == POLY_16BIT_CCITT && width == 16) ||
            (polynomial == POLY_8BIT_CCITT && width == 8) ||
+           (polynomial == POLY_8BIT_SAE_J1850 && width == 8) ||
            (polynomial == POLY_7BIT_SD && width == 7);
 #else
     return false;
@@ -208,6 +209,11 @@ public:
     constexpr MbedCRC() : MbedCRC(0, 0, false, false)
     {
     }
+
+    template<uint32_t poly = polynomial, std::enable_if_t<poly == POLY_8BIT_SAE_J1850 && width == 8, int> = 0>
+    constexpr MbedCRC() : MbedCRC(0xFF, 0xFF, true, true)
+    {
+    }
     // *INDENT-ON*
 
     /** Compute CRC for the data input
@@ -216,6 +222,7 @@ public:
      *
      *  @param  buffer  Data bytes
      *  @param  size  Size of data
+     * 
      *  @param  crc  CRC is the output value
      *  @return  0 on success, negative error code on failure
      */
@@ -848,6 +855,9 @@ const uint8_t MbedCRC<POLY_7BIT_SD, 7, CrcMode::TABLE>::_crc_table[MBED_CRC_TABL
 
 template<>
 const uint8_t MbedCRC<POLY_8BIT_CCITT, 8, CrcMode::TABLE>::_crc_table[MBED_CRC_TABLE_SIZE];
+
+template<>
+const uint8_t MbedCRC<POLY_8BIT_SAE_J1850, 8, CrcMode::TABLE>::_crc_table[MBED_CRC_TABLE_SIZE];
 
 template<>
 const uint16_t MbedCRC<POLY_16BIT_CCITT, 16, CrcMode::TABLE>::_crc_table[MBED_CRC_TABLE_SIZE];
