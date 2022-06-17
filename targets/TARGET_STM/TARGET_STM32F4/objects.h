@@ -88,6 +88,12 @@ struct spi_s {
     uint32_t event;
     uint8_t transfer_type;
 #endif
+#if defined(USE_SPI_DMA_STM32F407XX)
+    uint32_t useDMA;
+    uint32_t handler_cplt;
+    uint32_t handler_abort;
+    uint32_t handler_error;
+#endif /* USE_SPI_DMA_STM32F407XX */
 };
 
 struct i2c_s {
@@ -113,8 +119,8 @@ struct i2c_s {
     volatile uint8_t pending_slave_tx_master_rx;
     volatile uint8_t pending_slave_rx_maxter_tx;
     uint8_t *slave_rx_buffer;
-    volatile uint16_t slave_rx_buffer_size;
-    volatile uint16_t slave_rx_count;
+    volatile uint8_t slave_rx_buffer_size;
+    volatile uint8_t slave_rx_count;
 #endif
 #if DEVICE_I2C_ASYNCH
     uint32_t address;
