@@ -1,0 +1,10 @@
+connectivity/cellular/*
+connectivity/drivers/*
+connectivity/FEATURE_BLE/*
+connectivity/libraries/*
+connectivity/lorawan/*
+connectivity/lwipstack/*
+connectivity/nanostack/*
+connectivity/netsocket/*
+connectivity/nfc/*
+features/frameworks/*
