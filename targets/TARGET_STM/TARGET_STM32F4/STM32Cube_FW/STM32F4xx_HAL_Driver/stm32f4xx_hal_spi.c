@@ -1678,7 +1678,12 @@ HAL_StatusTypeDef HAL_SPI_Transmit_DMA(SPI_HandleTypeDef *hspi, uint8_t *pData, 
 #endif /* USE_SPI_CRC */
 
   /* Set the SPI TxDMA Half transfer complete callback */
+
+#if (USE_SPI_DMA_HT_IT != 0U)  
   hspi->hdmatx->XferHalfCpltCallback = SPI_DMAHalfTransmitCplt;
+#else
+  hspi->hdmatx->XferHalfCpltCallback = NULL;
+#endif /* USE_SPI_DMA_HT_IT */
 
   /* Set the SPI TxDMA transfer complete callback */
   hspi->hdmatx->XferCpltCallback = SPI_DMATransmitCplt;
@@ -1793,7 +1798,11 @@ HAL_StatusTypeDef HAL_SPI_Receive_DMA(SPI_HandleTypeDef *hspi, uint8_t *pData, u
 #endif /* USE_SPI_CRC */
 
   /* Set the SPI RxDMA Half transfer complete callback */
+#if (USE_SPI_DMA_HT_IT != 0)  
   hspi->hdmarx->XferHalfCpltCallback = SPI_DMAHalfReceiveCplt;
+#else
+  hspi->hdmarx->XferHalfCpltCallback = NULL;
+#endif /* USE_SPI_DMA_HT_IT */
 
   /* Set the SPI Rx DMA transfer complete callback */
   hspi->hdmarx->XferCpltCallback = SPI_DMAReceiveCplt;
@@ -1910,13 +1919,21 @@ HAL_StatusTypeDef HAL_SPI_TransmitReceive_DMA(SPI_HandleTypeDef *hspi, uint8_t *
   if (hspi->State == HAL_SPI_STATE_BUSY_RX)
   {
     /* Set the SPI Rx DMA Half transfer complete callback */
+#if (USE_SPI_DMA_HT_IT != 0U)    
     hspi->hdmarx->XferHalfCpltCallback = SPI_DMAHalfReceiveCplt;
+#else
+    hspi->hdmarx->XferHalfCpltCallback = NULL;
+#endif /* USE_SPI_DMA_HT_IT */
     hspi->hdmarx->XferCpltCallback     = SPI_DMAReceiveCplt;
   }
   else
   {
     /* Set the SPI Tx/Rx DMA Half transfer complete callback */
+#if (USE_SPI_DMA_HT_IT != 0U)    
     hspi->hdmarx->XferHalfCpltCallback = SPI_DMAHalfTransmitReceiveCplt;
+#else
+    hspi->hdmarx->XferHalfCpltCallback = NULL;
+#endif /* USE_SPI_DMA_HT_IT */
     hspi->hdmarx->XferCpltCallback     = SPI_DMATransmitReceiveCplt;
   }
 
