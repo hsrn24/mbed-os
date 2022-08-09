@@ -369,6 +369,12 @@
 
 #define USE_SPI_CRC                     1U
 
+/* SPI_DMA_HT_IT: Use DMA HT interrupt in SPI HAL API
+* Activated: DMA HT interrupt is used 
+* Deactivated: DMA HT interrupt is not used
+*/
+#define USE_SPI_DMA_HT_IT            0U
+
 /* Includes ------------------------------------------------------------------*/
 /**
   * @brief Include module's header file 
