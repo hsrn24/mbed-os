@@ -333,9 +333,9 @@ int can_frequency(can_t *obj, int f)
 
     uint32_t nominalPrescaler = 1;
     // !When the sample point should be lower than 50%, this must be changed to
-    // !IS_FDCAN_DATA_TSEG2(ntq/nominalPrescaler), since
+    // !IS_FDCAN_NOMINAL_TSEG2(ntq/nominalPrescaler), since
     // NTSEG2 and SJW max values are lower. For now the sample point is fix @75%
-    while (!IS_FDCAN_DATA_TSEG1(ntq / nominalPrescaler)) {
+    while (!IS_FDCAN_NOMINAL_TSEG1(ntq / nominalPrescaler)) {
         nominalPrescaler ++;
         if (!IS_FDCAN_NOMINAL_PRESCALER(nominalPrescaler)) {
             error("Could not determine good nominalPrescaler. Bad clock value\n");
@@ -546,7 +546,7 @@ static void can_irq(CANName name, int id)
             irq_handler(can_irq_contexts[id], IRQ_TX);
         }
     }
-#if (defined FDCAN_IT_RX_BUFFER_NEW_MESSAGE)
+#if (defined FDCAN_IT_RX_BUFFER_NEW_MESSAGE) && !defined(TARGET_STM32H7)
     if (__HAL_FDCAN_GET_IT_SOURCE(&CanHandle, FDCAN_IT_RX_BUFFER_NEW_MESSAGE)) {
         if (__HAL_FDCAN_GET_FLAG(&CanHandle, FDCAN_IT_RX_BUFFER_NEW_MESSAGE)) {
             __HAL_FDCAN_CLEAR_FLAG(&CanHandle, FDCAN_IT_RX_BUFFER_NEW_MESSAGE);
@@ -628,7 +628,7 @@ void can_irq_set(can_t *obj, CanIrqType type, uint32_t enable)
             interrupts = FDCAN_IT_TX_COMPLETE;
             break;
         case IRQ_RX:
-#if (defined FDCAN_IT_RX_BUFFER_NEW_MESSAGE)
+#if (defined FDCAN_IT_RX_BUFFER_NEW_MESSAGE) && !defined(TARGET_STM32H7)
             interrupts = FDCAN_IT_RX_BUFFER_NEW_MESSAGE;
 #else
             interrupts = FDCAN_IT_RX_FIFO0_NEW_MESSAGE;
@@ -1024,7 +1024,7 @@ int can_read(can_t *obj, CAN_Message *msg, int handle)
 
     msg->type = (CANType)(((uint8_t)0x02 & can->sFIFOMailBox[rxfifo_default].RIR) >> 1);
     /* Get the DLC */
-    msg->len = (uint8_t)0x0F & can->sFIFOMailBox[rxfifo_default].RDTR;
+    msg->len = ((uint8_t)0x0F & can->sFIFOMailBox[rxfifo_default].RDTR < 8) ? ((uint8_t)0x0F & can->sFIFOMailBox[rxfifo_default].RDTR) : ((uint8_t) 8);
     /* Get the FMI */
     // msg->FMI = (uint8_t)0xFF & (can->sFIFOMailBox[rxfifo_default].RDTR >> 8);
     /* Get the data field */
