@@ -85,6 +85,153 @@ extern HAL_StatusTypeDef HAL_SPIEx_FlushRxFifo(SPI_HandleTypeDef *hspi);
 #define HAS_32BIT_SPI_TRANSFERS 1
 #endif // SPI_DATASIZE_X
 
+#if defined(USE_SPI_DMA_STM32F407XX)
+#define SPI1_DMA_CLK_ENABLE()           __HAL_RCC_DMA2_CLK_ENABLE()
+#define SPI2_DMA_CLK_ENABLE()           __HAL_RCC_DMA1_CLK_ENABLE()
+
+/* Definition for SPI1's DMA */
+/* TX */
+#define SPI1_DMA_INSTANCE_TX            DMA2_Stream3
+#define SPI1_DMA_CHANNEL_TX             DMA_CHANNEL_3
+#define SPI1_DMA_TX_IRQn                DMA2_Stream3_IRQn
+#define SPI1_DMA_TX_IRQHandler          DMA2_Stream3_IRQHandler
+
+/* RX */
+#define SPI1_DMA_INSTANCE_RX            DMA2_Stream0
+#define SPI1_DMA_CHANNEL_RX             DMA_CHANNEL_3
+#define SPI1_DMA_RX_IRQn                DMA2_Stream0_IRQn
+#define SPI1_DMA_RX_IRQHandler          DMA2_Stream0_IRQHandler
+
+/* Definition for SPI2's DMA */
+/* TX */
+#define SPI2_DMA_INSTANCE_TX            DMA1_Stream4
+#define SPI2_DMA_CHANNEL_TX             DMA_CHANNEL_0
+#define SPI2_DMA_TX_IRQn                DMA1_Stream4_IRQn
+#define SPI2_DMA_TX_IRQHandler          DMA1_Stream4_IRQHandler
+
+/* RX */
+#define SPI2_DMA_INSTANCE_RX            DMA1_Stream3
+#define SPI2_DMA_CHANNEL_RX             DMA_CHANNEL_0
+#define SPI2_DMA_RX_IRQn                DMA1_Stream3_IRQn
+#define SPI2_DMA_RX_IRQHandler          DMA1_Stream3_IRQHandler
+
+enum HDMA_SPI_INDEX {
+    SPI1_TX,
+    SPI1_RX,
+    SPI2_TX,
+    SPI2_RX,
+    MAX_HDMA_SPI
+};
+
+DMA_HandleTypeDef hdma_SPI[MAX_HDMA_SPI];
+
+/**
+  * @brief  This function handles DMA interrupt request.
+  * @param  None
+  * @retval None
+  */
+void SPI1_DMA_TX_IRQHandler(void)
+{
+    HAL_DMA_IRQHandler(&hdma_SPI[SPI1_TX]);
+}
+
+/**
+  * @brief  This function handles DMA interrupt request.
+  * @param  None
+  * @retval None
+  */
+void SPI1_DMA_RX_IRQHandler(void)
+{
+    HAL_DMA_IRQHandler(&hdma_SPI[SPI1_RX]);
+}
+
+/**
+  * @brief  This function handles DMA interrupt request.
+  * @param  None
+  * @retval None
+  */
+void SPI2_DMA_TX_IRQHandler(void)
+{
+    HAL_DMA_IRQHandler(&hdma_SPI[SPI2_TX]);
+}
+
+/**
+  * @brief  This function handles DMA interrupt request.
+  * @param  None
+  * @retval None
+  */
+void SPI2_DMA_RX_IRQHandler(void)
+{
+    HAL_DMA_IRQHandler(&hdma_SPI[SPI2_RX]);
+}
+
+typedef void (*Function_Pointer)(void);
+
+void HAL_SPI_TxCpltCallback(SPI_HandleTypeDef *hspi)
+{
+    // not so nice hack
+    struct spi_s *spiobj = ((struct spi_s *)(hspi));
+
+    /* Execute the saved callback handler */
+    if (spiobj->handler_cplt != NULL) {
+        Function_Pointer  handler;
+        handler = (Function_Pointer) spiobj->handler_cplt;
+        handler();
+    }
+}
+
+void HAL_SPI_RxCpltCallback(SPI_HandleTypeDef *hspi)
+{
+    // not so nice hack
+    struct spi_s *spiobj = ((struct spi_s *)(hspi));
+
+    /* Execute the saved callback handler */
+    if (spiobj->handler_cplt != NULL) {
+        Function_Pointer  handler;
+        handler = (Function_Pointer) spiobj->handler_cplt;
+        handler();
+    }
+}
+
+void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi)
+{
+    struct spi_s *spiobj = ((struct spi_s *)(hspi));
+
+    /* Execute the saved callback handler */
+    if (spiobj->handler_cplt != NULL) {
+        Function_Pointer  handler;
+        handler = (Function_Pointer) spiobj->handler_cplt;
+        handler();
+    }
+}
+
+void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi)
+{
+    struct spi_s *spiobj = ((struct spi_s *)(hspi));
+
+    /* Execute the saved callback handler */
+    if (spiobj->handler_error != NULL) {
+        Function_Pointer  handler;
+        handler = (Function_Pointer) spiobj->handler_error;
+        handler();
+    }
+}
+
+void HAL_SPI_AbortCpltCallback(SPI_HandleTypeDef *hspi)
+{
+    struct spi_s *spiobj = ((struct spi_s *)(hspi));
+
+    /* Execute the saved callback handler */
+    if (spiobj->handler_abort != NULL) {
+        Function_Pointer  handler;
+        handler = (Function_Pointer) spiobj->handler_abort;
+        handler();
+    }
+}
+
+#endif /* USE_SPI_DMA_STM32F407XX */
+
+
 /**
  * Flush RX FIFO/input register of SPI interface and clear overrun flag.
  */
@@ -205,6 +352,13 @@ static void _spi_init_direct(spi_t *obj, const spi_pinmap_t *pinmap)
     RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 #endif /* SPI_IP_VERSION_V2 */
 
+#if defined(USE_SPI_DMA_STM32F407XX)
+    /* Default don't use DMA */
+    spiobj->useDMA = DMA_USAGE_ALLOCATED;
+#else
+    spiobj->useDMA = DMA_USAGE_NEVER;
+#endif /* USE_SPI_DMA_STM32F407XX */
+
 #if defined SPI1_BASE
     // Enable SPI clock
     if (spiobj->spi == SPI_1) {
@@ -224,6 +378,46 @@ static void _spi_init_direct(spi_t *obj, const spi_pinmap_t *pinmap)
         __HAL_RCC_SPI1_RELEASE_RESET();
         __HAL_RCC_SPI1_CLK_ENABLE();
         spiobj->spiIRQ = SPI1_IRQn;
+
+        /* Initialise DMA for SPI */
+        if (spiobj->useDMA > 0) {
+            SPI1_DMA_CLK_ENABLE();
+
+            /* Configure the DMA Channels */
+            /* Configure the DMA handler for Transmission process */
+            hdma_SPI[SPI1_TX].Instance = SPI1_DMA_INSTANCE_TX;
+            hdma_SPI[SPI1_TX].Init.Channel = SPI1_DMA_CHANNEL_TX;
+            hdma_SPI[SPI1_TX].Init.Direction = DMA_MEMORY_TO_PERIPH;
+            hdma_SPI[SPI1_TX].Init.PeriphInc = DMA_PINC_DISABLE;
+            hdma_SPI[SPI1_TX].Init.MemInc = DMA_MINC_ENABLE;
+            hdma_SPI[SPI1_TX].Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+            hdma_SPI[SPI1_TX].Init.MemDataAlignment = DMA_PDATAALIGN_BYTE;
+            hdma_SPI[SPI1_TX].Init.Mode = DMA_NORMAL;
+            hdma_SPI[SPI1_TX].Init.Priority = DMA_PRIORITY_HIGH; // DMA_PRIORITY_NORMAL/LOW
+            hdma_SPI[SPI1_TX].Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+
+            HAL_DMA_Init(&hdma_SPI[SPI1_TX]);
+
+            /* Associate the initialized DMA handle to the the SPI handle */
+            __HAL_LINKDMA(handle, hdmatx, hdma_SPI[SPI1_TX]);
+
+            /* Configure the DMA handler for Transmission process */
+            hdma_SPI[SPI1_RX].Instance = SPI1_DMA_INSTANCE_RX;
+            hdma_SPI[SPI1_RX].Init.Channel = SPI1_DMA_CHANNEL_RX;
+            hdma_SPI[SPI1_RX].Init.Direction = DMA_PERIPH_TO_MEMORY;
+            hdma_SPI[SPI1_RX].Init.PeriphInc = DMA_PINC_DISABLE;
+            hdma_SPI[SPI1_RX].Init.MemInc = DMA_MINC_ENABLE;
+            hdma_SPI[SPI1_RX].Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+            hdma_SPI[SPI1_RX].Init.MemDataAlignment = DMA_PDATAALIGN_BYTE;
+            hdma_SPI[SPI1_RX].Init.Mode = DMA_NORMAL;
+            hdma_SPI[SPI1_RX].Init.Priority = DMA_PRIORITY_HIGH;
+            hdma_SPI[SPI1_RX].Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+
+            HAL_DMA_Init(&hdma_SPI[SPI1_RX]);
+
+            /* Associate the initialized DMA handle to the the SPI handle */
+            __HAL_LINKDMA(handle, hdmarx, hdma_SPI[SPI1_RX]);
+        }
     }
 #endif
 
@@ -245,6 +439,46 @@ static void _spi_init_direct(spi_t *obj, const spi_pinmap_t *pinmap)
         __HAL_RCC_SPI2_RELEASE_RESET();
         __HAL_RCC_SPI2_CLK_ENABLE();
         spiobj->spiIRQ = SPI2_IRQn;
+
+        /* Initialise DMA for SPI */
+        if (spiobj->useDMA > 0) {
+            SPI2_DMA_CLK_ENABLE();
+
+            /* Configure the DMA Channels */
+            /* Configure the DMA handler for Transmission process */
+            hdma_SPI[SPI2_TX].Instance = SPI2_DMA_INSTANCE_TX;
+            hdma_SPI[SPI2_TX].Init.Channel = SPI2_DMA_CHANNEL_TX;
+            hdma_SPI[SPI2_TX].Init.Direction = DMA_MEMORY_TO_PERIPH;
+            hdma_SPI[SPI2_TX].Init.PeriphInc = DMA_PINC_DISABLE;
+            hdma_SPI[SPI2_TX].Init.MemInc = DMA_MINC_ENABLE;
+            hdma_SPI[SPI2_TX].Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
+            hdma_SPI[SPI2_TX].Init.MemDataAlignment = DMA_PDATAALIGN_HALFWORD;
+            hdma_SPI[SPI2_TX].Init.Mode = DMA_NORMAL;
+            hdma_SPI[SPI2_TX].Init.Priority = DMA_PRIORITY_HIGH;
+            hdma_SPI[SPI2_TX].Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+
+            HAL_DMA_Init(&hdma_SPI[SPI2_TX]);
+
+            /* Associate the initialized DMA handle to the the SPI handle */
+            __HAL_LINKDMA(handle, hdmatx, hdma_SPI[SPI2_TX]);
+
+            /* Configure the DMA handler for Transmission process */
+            hdma_SPI[SPI2_RX].Instance = SPI2_DMA_INSTANCE_RX;
+            hdma_SPI[SPI2_RX].Init.Channel = SPI2_DMA_CHANNEL_RX;
+            hdma_SPI[SPI2_RX].Init.Direction = DMA_PERIPH_TO_MEMORY;
+            hdma_SPI[SPI2_RX].Init.PeriphInc = DMA_PINC_DISABLE;
+            hdma_SPI[SPI2_RX].Init.MemInc = DMA_MINC_ENABLE;
+            hdma_SPI[SPI2_RX].Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
+            hdma_SPI[SPI2_RX].Init.MemDataAlignment = DMA_PDATAALIGN_HALFWORD;
+            hdma_SPI[SPI2_RX].Init.Mode = DMA_NORMAL;
+            hdma_SPI[SPI2_RX].Init.Priority = DMA_PRIORITY_HIGH;
+            hdma_SPI[SPI2_RX].Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+
+            HAL_DMA_Init(&hdma_SPI[SPI2_RX]);
+
+            /* Associate the initialized DMA handle to the the SPI handle */
+            __HAL_LINKDMA(handle, hdmarx, hdma_SPI[SPI2_RX]);
+        }
     }
 #endif
 
@@ -386,11 +620,49 @@ static void _spi_init_direct(spi_t *obj, const spi_pinmap_t *pinmap)
 #endif
 #endif /* SPI_IP_VERSION_V2 */
 
+#if defined(USE_MURATA_SPI_CONFIGURATION)
+    // overrite default configuration for SPI2
+    if (spiobj->spi == SPI_2) {
+        handle->Init.Mode = SPI_MODE_MASTER;
+        handle->Init.Direction = SPI_DIRECTION_2LINES;
+        handle->Init.DataSize = SPI_DATASIZE_16BIT;
+        handle->Init.CLKPolarity = SPI_POLARITY_LOW;
+        handle->Init.CLKPhase = SPI_PHASE_1EDGE;
+        handle->Init.NSS = SPI_NSS_SOFT;
+        handle->Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_64; // 1.3125 Mbit/s
+        handle->Init.FirstBit = SPI_FIRSTBIT_MSB;
+        handle->Init.TIMode = SPI_TIMODE_DISABLE;
+        handle->Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
+        handle->Init.CRCPolynomial = 10;
+    }
+#endif /* USE_MURATA_SPI_CONFIGURATION */
     /*
     * According the STM32 Datasheet for SPI peripheral we need to PULLDOWN
     * or PULLUP the SCK pin according the polarity used.
     */
     pin_mode(spiobj->pin_sclk, (handle->Init.CLKPolarity == SPI_POLARITY_LOW) ? PullDown : PullUp);
+
+    if (spiobj->useDMA > 0) {
+        if (handle->Instance == SPI1) {
+            /* Configure the NVIC for DMA */
+            /* NVIC configuration for DMA transfer complete interrupt (SPIx_TX) */
+            NVIC_SetPriority(SPI1_DMA_TX_IRQn, 1);
+            NVIC_EnableIRQ(SPI1_DMA_TX_IRQn);
+
+            /* NVIC configuration for DMA transfer complete interrupt (SPIx_RX) */
+            NVIC_SetPriority(SPI1_DMA_RX_IRQn, 1);
+            NVIC_EnableIRQ(SPI1_DMA_RX_IRQn);
+        } else if (handle->Instance == SPI2) {
+            /* Configure the NVIC for DMA */
+            /* NVIC configuration for DMA transfer complete interrupt (SPIx_TX) */
+            NVIC_SetPriority(SPI2_DMA_TX_IRQn, 1);
+            NVIC_EnableIRQ(SPI2_DMA_TX_IRQn);
+
+            /* NVIC configuration for DMA transfer complete interrupt (SPIx_RX) */
+            NVIC_SetPriority(SPI2_DMA_RX_IRQn, 1);
+            NVIC_EnableIRQ(SPI2_DMA_RX_IRQn);
+        }
+   }
 
     init_spi(obj);
 }
@@ -438,6 +710,11 @@ void spi_free(spi_t *obj)
         __HAL_RCC_SPI1_FORCE_RESET();
         __HAL_RCC_SPI1_RELEASE_RESET();
         __HAL_RCC_SPI1_CLK_DISABLE();
+    
+        if (spiobj->useDMA > 0) {
+            HAL_DMA_DeInit(handle->hdmarx);
+            HAL_DMA_DeInit(handle->hdmatx);
+        }    
     }
 #endif
 #if defined SPI2_BASE
@@ -445,6 +722,11 @@ void spi_free(spi_t *obj)
         __HAL_RCC_SPI2_FORCE_RESET();
         __HAL_RCC_SPI2_RELEASE_RESET();
         __HAL_RCC_SPI2_CLK_DISABLE();
+
+        if (spiobj->useDMA > 0) {
+            HAL_DMA_DeInit(handle->hdmarx);
+            HAL_DMA_DeInit(handle->hdmatx);
+        }
     }
 #endif
 
@@ -1380,12 +1662,13 @@ static int spi_master_start_asynch_transfer(spi_t *obj, transfer_type_t transfer
     words = length >> bitshift;
 
     // enable the interrupt
-    IRQn_Type irq_n = spiobj->spiIRQ;
-    NVIC_DisableIRQ(irq_n);
-    NVIC_ClearPendingIRQ(irq_n);
-    NVIC_SetPriority(irq_n, 1);
-    NVIC_EnableIRQ(irq_n);
-
+    if (spiobj->useDMA == DMA_USAGE_NEVER) {
+        IRQn_Type irq_n = spiobj->spiIRQ;
+        NVIC_DisableIRQ(irq_n);
+        NVIC_ClearPendingIRQ(irq_n);
+        NVIC_SetPriority(irq_n, 1);
+        NVIC_EnableIRQ(irq_n);
+    }
     // flush FIFO
 #if defined(SPI_FLAG_FRLVL)
     HAL_SPIEx_FlushRxFifo(handle);
@@ -1400,16 +1683,28 @@ static int spi_master_start_asynch_transfer(spi_t *obj, transfer_type_t transfer
 #endif
     switch (transfer_type) {
         case SPI_TRANSFER_TYPE_TXRX:
-            rc = HAL_SPI_TransmitReceive_IT(handle, (uint8_t *)tx, (uint8_t *)rx, words);
+            if (spiobj->useDMA > DMA_USAGE_NEVER) {
+                rc = HAL_SPI_TransmitReceive_DMA(handle, (uint8_t *)tx, (uint8_t *)rx, words);
+            } else {
+                rc = HAL_SPI_TransmitReceive_IT(handle, (uint8_t *)tx, (uint8_t *)rx, words);
+            } 
             break;
         case SPI_TRANSFER_TYPE_TX:
-            rc = HAL_SPI_Transmit_IT(handle, (uint8_t *)tx, words);
+            if (spiobj->useDMA > DMA_USAGE_NEVER) {
+                rc = HAL_SPI_Transmit_DMA(handle, (uint8_t *)tx, words);
+            } else {
+                rc = HAL_SPI_Transmit_IT(handle, (uint8_t *)tx, words);
+            }
             break;
         case SPI_TRANSFER_TYPE_RX:
             // the receive function also "transmits" the receive buffer so in order
             // to guarantee that 0xff is on the line, we explicitly memset it here
             memset(rx, SPI_FILL_CHAR, length);
-            rc = HAL_SPI_Receive_IT(handle, (uint8_t *)rx, words);
+            if (spiobj->useDMA > DMA_USAGE_NEVER) {
+                rc = HAL_SPI_Receive_DMA(handle, (uint8_t *)rx, words);
+            } else {
+                rc = HAL_SPI_Receive_IT(handle, (uint8_t *)rx, words);
+            }
             break;
         default:
             length = 0;
@@ -1464,10 +1759,14 @@ void spi_master_transfer(spi_t *obj, const void *tx, size_t tx_length, void *rx,
     obj->spi.event = event;
 
     // register the thunking handler
-    IRQn_Type irq_n = spiobj->spiIRQ;
-    NVIC_SetVector(irq_n, (uint32_t)handler);
-    DEBUG_PRINTF("SPI: Transfer: tx %u (%u), rx %u (%u), IRQ %u\n", use_tx, tx_length, use_rx, rx_length, irq_n);
-
+    if (spiobj->useDMA > DMA_USAGE_NEVER) {
+        obj->spi.handler_cplt = handler;
+    } else {
+        // register the thunking handler
+        IRQn_Type irq_n = spiobj->spiIRQ;
+        NVIC_SetVector(irq_n, handler);
+        DEBUG_PRINTF("SPI: Transfer: tx %u (%u), rx %u (%u), IRQ %u\n", use_tx, tx_length, use_rx, rx_length, irq_n);
+    }
     // enable the right hal transfer
     if (use_tx && use_rx) {
         // we cannot manage different rx / tx sizes, let's use smaller one
@@ -1558,15 +1857,21 @@ void spi_abort_asynch(spi_t *obj)
     struct spi_s *spiobj = SPI_S(obj);
     SPI_HandleTypeDef *handle = &(spiobj->handle);
 
-    // disable interrupt
-    IRQn_Type irq_n = spiobj->spiIRQ;
-    NVIC_ClearPendingIRQ(irq_n);
-    NVIC_DisableIRQ(irq_n);
+    if (obj->spi.useDMA == DMA_USAGE_NEVER) {
+        HAL_SPI_Abort_IT(handle);
+        //TODO: Do I need to re-init DMA ? 
+    } else {
+        // disable interrupt
+        IRQn_Type irq_n = spiobj->spiIRQ;
+        NVIC_ClearPendingIRQ(irq_n);
+        NVIC_DisableIRQ(irq_n);
 
-    // clean-up
-    LL_SPI_Disable(SPI_INST(obj));
-    HAL_SPI_DeInit(handle);
-    HAL_SPI_Init(handle);
+        // clean-up
+        LL_SPI_Disable(SPI_INST(obj));
+        HAL_SPI_DeInit(handle);
+        HAL_SPI_Init(handle);
+    }
+
     // cleanup input buffer
     spi_flush_rx(obj);
     // enable SPI back if it isn't 3-wire mode
@@ -1577,4 +1882,4 @@ void spi_abort_asynch(spi_t *obj)
 
 #endif //DEVICE_SPI_ASYNCH
 
-#endif
+#endif /* DEVICE_SPI */
