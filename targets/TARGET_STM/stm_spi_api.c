@@ -85,7 +85,6 @@ extern HAL_StatusTypeDef HAL_SPIEx_FlushRxFifo(SPI_HandleTypeDef *hspi);
 #define HAS_32BIT_SPI_TRANSFERS 1
 #endif // SPI_DATASIZE_X
 
-#if defined(USE_SPI_DMA_STM32F407XX)
 #define SPI1_DMA_CLK_ENABLE()           __HAL_RCC_DMA2_CLK_ENABLE()
 #define SPI2_DMA_CLK_ENABLE()           __HAL_RCC_DMA1_CLK_ENABLE()
 
@@ -229,8 +228,6 @@ void HAL_SPI_AbortCpltCallback(SPI_HandleTypeDef *hspi)
     }
 }
 
-#endif /* USE_SPI_DMA_STM32F407XX */
-
 
 /**
  * Flush RX FIFO/input register of SPI interface and clear overrun flag.
@@ -352,16 +349,15 @@ static void _spi_init_direct(spi_t *obj, const spi_pinmap_t *pinmap)
     RCC_PeriphCLKInitTypeDef PeriphClkInit = {0};
 #endif /* SPI_IP_VERSION_V2 */
 
-#if defined(USE_SPI_DMA_STM32F407XX)
-    /* Default don't use DMA */
-    spiobj->useDMA = DMA_USAGE_ALLOCATED;
-#else
+    // By default don't use DMA
     spiobj->useDMA = DMA_USAGE_NEVER;
-#endif /* USE_SPI_DMA_STM32F407XX */
 
 #if defined SPI1_BASE
     // Enable SPI clock
     if (spiobj->spi == SPI_1) {
+#if defined(USE_SPI1_DMA)
+        spiobj->useDMA = DMA_USAGE_ALLOCATED;
+#endif
 #if defined(SPI_IP_VERSION_V2)
         PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_SPI1;
 #if defined (RCC_SPI123CLKSOURCE_PLL)
@@ -423,6 +419,9 @@ static void _spi_init_direct(spi_t *obj, const spi_pinmap_t *pinmap)
 
 #if defined SPI2_BASE
     if (spiobj->spi == SPI_2) {
+#if defined(USE_SPI2_DMA)
+        spiobj->useDMA = DMA_USAGE_ALLOCATED;
+#endif
 #if defined(SPI_IP_VERSION_V2)
         PeriphClkInit.PeriphClockSelection = RCC_PERIPHCLK_SPI2;
 #if defined (RCC_SPI123CLKSOURCE_PLL)
@@ -620,7 +619,7 @@ static void _spi_init_direct(spi_t *obj, const spi_pinmap_t *pinmap)
 #endif
 #endif /* SPI_IP_VERSION_V2 */
 
-#if defined(USE_MURATA_SPI_CONFIGURATION)
+#if defined(USE_SPI2_DMA)
     // overrite default configuration for SPI2
     if (spiobj->spi == SPI_2) {
         handle->Init.Mode = SPI_MODE_MASTER;
@@ -635,7 +634,7 @@ static void _spi_init_direct(spi_t *obj, const spi_pinmap_t *pinmap)
         handle->Init.CRCCalculation = SPI_CRCCALCULATION_DISABLE;
         handle->Init.CRCPolynomial = 10;
     }
-#endif /* USE_MURATA_SPI_CONFIGURATION */
+#endif /* USE_SPI_ */
     /*
     * According the STM32 Datasheet for SPI peripheral we need to PULLDOWN
     * or PULLUP the SCK pin according the polarity used.
