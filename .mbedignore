@@ -8,3 +8,6 @@ connectivity/nanostack/*
 connectivity/netsocket/*
 connectivity/nfc/*
 features/frameworks/*
+storage/filesystem/littlefs/*
+storage/kvstore/*
+storage/platform/*
