@@ -386,8 +386,8 @@ static void _spi_init_direct(spi_t *obj, const spi_pinmap_t *pinmap)
             hdma_SPI[SPI1_TX].Init.Direction = DMA_MEMORY_TO_PERIPH;
             hdma_SPI[SPI1_TX].Init.PeriphInc = DMA_PINC_DISABLE;
             hdma_SPI[SPI1_TX].Init.MemInc = DMA_MINC_ENABLE;
-            hdma_SPI[SPI1_TX].Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
-            hdma_SPI[SPI1_TX].Init.MemDataAlignment = DMA_PDATAALIGN_BYTE;
+            hdma_SPI[SPI1_TX].Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
+            hdma_SPI[SPI1_TX].Init.MemDataAlignment = DMA_PDATAALIGN_HALFWORD;
             hdma_SPI[SPI1_TX].Init.Mode = DMA_NORMAL;
             hdma_SPI[SPI1_TX].Init.Priority = DMA_PRIORITY_HIGH; // DMA_PRIORITY_NORMAL/LOW
             hdma_SPI[SPI1_TX].Init.FIFOMode = DMA_FIFOMODE_DISABLE;
@@ -403,8 +403,8 @@ static void _spi_init_direct(spi_t *obj, const spi_pinmap_t *pinmap)
             hdma_SPI[SPI1_RX].Init.Direction = DMA_PERIPH_TO_MEMORY;
             hdma_SPI[SPI1_RX].Init.PeriphInc = DMA_PINC_DISABLE;
             hdma_SPI[SPI1_RX].Init.MemInc = DMA_MINC_ENABLE;
-            hdma_SPI[SPI1_RX].Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
-            hdma_SPI[SPI1_RX].Init.MemDataAlignment = DMA_PDATAALIGN_BYTE;
+            hdma_SPI[SPI1_RX].Init.PeriphDataAlignment = DMA_PDATAALIGN_HALFWORD;
+            hdma_SPI[SPI1_RX].Init.MemDataAlignment = DMA_PDATAALIGN_HALFWORD;
             hdma_SPI[SPI1_RX].Init.Mode = DMA_NORMAL;
             hdma_SPI[SPI1_RX].Init.Priority = DMA_PRIORITY_HIGH;
             hdma_SPI[SPI1_RX].Init.FIFOMode = DMA_FIFOMODE_DISABLE;
@@ -582,6 +582,7 @@ static void _spi_init_direct(spi_t *obj, const spi_pinmap_t *pinmap)
     }
 
     /* Fill default value */
+    handle->State = HAL_SPI_STATE_RESET;
     handle->Instance = SPI_INST(obj);
     handle->Init.Mode              = SPI_MODE_MASTER;
     handle->Init.BaudRatePrescaler = SPI_BAUDRATEPRESCALER_256;
@@ -619,9 +620,9 @@ static void _spi_init_direct(spi_t *obj, const spi_pinmap_t *pinmap)
 #endif
 #endif /* SPI_IP_VERSION_V2 */
 
-#if defined(USE_SPI2_DMA)
+#if defined(USE_SPI1_DMA)
     // overrite default configuration for SPI2
-    if (spiobj->spi == SPI_2) {
+    if (spiobj->spi == SPI_1) {
         handle->Init.Mode = SPI_MODE_MASTER;
         handle->Init.Direction = SPI_DIRECTION_2LINES;
         handle->Init.DataSize = SPI_DATASIZE_16BIT;
